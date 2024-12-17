@@ -1,0 +1,58 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=qwerty
+      - DB_NAME=cruddb
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  golangci-lint:
+    image: golangci/golangci-lint:latest
+    container_name: golangci_lint
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: ["golangci-lint", "run", "--timeout=5m"]
+
+  db:
+    image: postgres:15
+    container_name: postgres_container
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: qwerty
+      POSTGRES_DB: cruddb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  migrate:
+    image: migrate/migrate
+    container_name: migrate_container
+    command: ["-path", "/migrations", "-database", "postgres://postgres:qwerty@db:5432/cruddb?sslmode=disable", "up"]
+    depends_on:
+      - db
+    volumes:
+      - ./db/migrations:/migrations
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
